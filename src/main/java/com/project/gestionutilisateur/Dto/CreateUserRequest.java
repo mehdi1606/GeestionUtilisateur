@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 public class CreateUserRequest {
     @NotBlank(message = "Le login est obligatoire")
     @Size(min = 3, max = 50, message = "Le login doit contenir entre 3 et 50 caractères")
@@ -24,6 +26,9 @@ public class CreateUserRequest {
     private String email;
 
     private String telephone;
+
+    // Liste des rôles que l'utilisateur peut choisir
+    private List<String> roles;
 
     // Constructeurs
     public CreateUserRequest() {}
@@ -46,4 +51,7 @@ public class CreateUserRequest {
 
     public String getTelephone() { return telephone; }
     public void setTelephone(String telephone) { this.telephone = telephone; }
+
+    public List<String> getRoles() { return roles; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
 }

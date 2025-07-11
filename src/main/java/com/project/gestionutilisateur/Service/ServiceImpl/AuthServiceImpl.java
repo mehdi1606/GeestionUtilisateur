@@ -1,18 +1,16 @@
 package com.project.gestionutilisateur.Service.ServiceImpl;
 
-
 import com.project.gestionutilisateur.Dto.AuthRequest;
 import com.project.gestionutilisateur.Dto.AuthResponse;
 import com.project.gestionutilisateur.Dto.CreateUserRequest;
 import com.project.gestionutilisateur.Dto.UserDto;
-import com.project.gestionutilisateur.Exception.AuthenticationException;
 import com.project.gestionutilisateur.Service.AuthService;
 import com.project.gestionutilisateur.Service.UserService;
 import com.project.gestionutilisateur.Util.DtoMapper;
 import com.project.gestionutilisateur.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -56,8 +54,10 @@ public class AuthServiceImpl implements AuthService {
 
             return new AuthResponse(token, userDto);
 
-        } catch (AuthenticationException e) {
-            throw new RuntimeException("Login ou mot de passe incorrect");
+        } catch (BadCredentialsException e) {
+            throw new com.project.gestionutilisateur.Exception.AuthenticationException("Login ou mot de passe incorrect");
+        } catch (Exception e) {
+            throw new com.project.gestionutilisateur.Exception.AuthenticationException("Erreur lors de l'authentification: " + e.getMessage());
         }
     }
 
@@ -80,8 +80,12 @@ public class AuthServiceImpl implements AuthService {
     public String refreshToken(String token) {
         if (jwtTokenProvider.validateToken(token)) {
             String username = jwtTokenProvider.getUsernameFromToken(token);
-            // Créer une nouvelle authentification pour générer un nouveau token
-            return jwtTokenProvider.getUsernameFromToken(username);
+            // Pour générer un nouveau token, nous devons créer une nouvelle authentification
+            // Ici, nous retournons simplement un nouveau token pour le même utilisateur
+            UserDto user = userService.getUserByLogin(username);
+            // Créer une authentification simple pour générer le token
+            Authentication auth = new UsernamePasswordAuthenticationToken(username, null);
+            return jwtTokenProvider.generateToken(auth);
         }
         throw new RuntimeException("Token invalide pour le rafraîchissement");
     }

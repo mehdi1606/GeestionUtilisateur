@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -51,16 +52,39 @@ public class UserServiceImpl implements UserService {
                 request.getEmail()
         );
 
-        // Récupérer le rôle USER par défaut
-        Role roleUser = roleRepository.findByLibelle("ROLE_USER")
-                .orElseThrow(() -> new ResourceNotFoundException("Rôle USER non trouvé"));
+        // Gérer les rôles
+        Set<Role> userRoles = new HashSet<>();
+
+        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
+            // L'utilisateur a choisi des rôles spécifiques
+            for (String roleName : request.getRoles()) {
+                // S'assurer que le rôle commence par "ROLE_"
+                String formattedRoleName = roleName.startsWith("ROLE_") ? roleName : "ROLE_" + roleName.toUpperCase();
+
+                Role role = roleRepository.findByLibelle(formattedRoleName)
+                        .orElseGet(() -> {
+                            // Créer le rôle s'il n'existe pas
+                            Role newRole = new Role(formattedRoleName);
+                            return roleRepository.save(newRole);
+                        });
+                userRoles.add(role);
+            }
+        } else {
+            // Aucun rôle spécifié, assigner ROLE_USER par défaut
+            Role roleUser = roleRepository.findByLibelle("ROLE_USER")
+                    .orElseGet(() -> {
+                        Role newRole = new Role("ROLE_USER");
+                        return roleRepository.save(newRole);
+                    });
+            userRoles.add(roleUser);
+        }
 
         // Créer l'utilisateur
         User user = new User(
                 request.getLogin(),
                 passwordEncoder.encode(request.getPassword()),
                 personne,
-                Set.of(roleUser)
+                userRoles
         );
 
         // Sauvegarder
@@ -117,6 +141,21 @@ public class UserServiceImpl implements UserService {
         personne.setPrenom(request.getPrenom());
         personne.setEmail(request.getEmail());
         personne.setTelephone(request.getTelephone());
+
+        // Mettre à jour les rôles si spécifiés
+        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
+            Set<Role> updatedRoles = new HashSet<>();
+            for (String roleName : request.getRoles()) {
+                String formattedRoleName = roleName.startsWith("ROLE_") ? roleName : "ROLE_" + roleName.toUpperCase();
+                Role role = roleRepository.findByLibelle(formattedRoleName)
+                        .orElseGet(() -> {
+                            Role newRole = new Role(formattedRoleName);
+                            return roleRepository.save(newRole);
+                        });
+                updatedRoles.add(role);
+            }
+            existingUser.setRoles(updatedRoles);
+        }
 
         User updatedUser = userRepository.save(existingUser);
 
